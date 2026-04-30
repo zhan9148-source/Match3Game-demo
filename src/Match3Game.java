@@ -10,10 +10,13 @@ public class Match3Game extends JPanel {
 
   private static final int ANIMATION_STEPS = 10;
   private static final int DROP_STEPS = 12;
+  private static final int CLEAR_STEPS = 14;
 
   private final int[][] board = new int[ROWS][COLS];
   private final int[][] newBoard = new int[ROWS][COLS];
   private final int[][] startRow = new int[ROWS][COLS];
+
+  private boolean[][] clearingMatches = new boolean[ROWS][COLS];
 
   private final Random random = new Random();
 
@@ -23,10 +26,12 @@ public class Match3Game extends JPanel {
   private boolean animating = false;
   private boolean swapBack = false;
   private boolean dropping = false;
+  private boolean clearing = false;
 
   private int aRow, aCol, bRow, bCol;
   private int animationStep = 0;
   private int dropStep = 0;
+  private int clearStep = 0;
 
   private final Color[] colors = {
       Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW, Color.MAGENTA
@@ -99,6 +104,7 @@ public class Match3Game extends JPanel {
     animationStep = 0;
     swapBack = false;
     dropping = false;
+    clearing = false;
     animating = true;
 
     Timer timer = new Timer(15, null);
@@ -216,9 +222,31 @@ public class Match3Game extends JPanel {
   }
 
   private void resolveBoard() {
-    boolean[][] matches = findMatches();
-    removeMatches(matches);
-    startDropAnimation();
+    clearingMatches = findMatches();
+    startClearAnimation();
+  }
+
+  private void startClearAnimation() {
+    clearStep = 0;
+    clearing = true;
+    animating = true;
+
+    Timer timer = new Timer(25, null);
+    timer.addActionListener(e -> {
+      clearStep++;
+      repaint();
+
+      if (clearStep >= CLEAR_STEPS) {
+        timer.stop();
+
+        removeMatches(clearingMatches);
+
+        clearing = false;
+        startDropAnimation();
+      }
+    });
+
+    timer.start();
   }
 
   private void removeMatches(boolean[][] matches) {
@@ -284,10 +312,7 @@ public class Match3Game extends JPanel {
 
       while (writeRow >= 0) {
         newBoard[writeRow][c] = randomGem();
-
-        // 让新宝石从棋盘上方掉下来
         startRow[writeRow][c] = writeRow - ROWS;
-
         writeRow--;
       }
     }
@@ -306,6 +331,7 @@ public class Match3Game extends JPanel {
     super.paintComponent(g);
 
     Graphics2D g2 = (Graphics2D) g;
+    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
     double progress = animationStep / (double) ANIMATION_STEPS;
     if (swapBack) {
@@ -324,7 +350,12 @@ public class Match3Game extends JPanel {
           continue;
         }
 
-        if (animating && ((r == aRow && c == aCol) || (r == bRow && c == bCol))) {
+        if (clearing && clearingMatches[r][c]) {
+          drawBreakingGem(g2, board[r][c], x, y, clearStep / (double) CLEAR_STEPS);
+          continue;
+        }
+
+        if (animating && !clearing && ((r == aRow && c == aCol) || (r == bRow && c == bCol))) {
           continue;
         }
 
@@ -332,7 +363,7 @@ public class Match3Game extends JPanel {
       }
     }
 
-    if (animating && !dropping) {
+    if (animating && !dropping && !clearing) {
       int ax = aCol * CELL_SIZE;
       int ay = aRow * CELL_SIZE;
       int bx = bCol * CELL_SIZE;
@@ -390,6 +421,36 @@ public class Match3Game extends JPanel {
 
     g2.setColor(colors[gem]);
     g2.fillOval(x + 10, y + 10, CELL_SIZE - 20, CELL_SIZE - 20);
+  }
+
+  private void drawBreakingGem(Graphics2D g2, int gem, int x, int y, double progress) {
+    if (gem < 0) return;
+
+    Color color = colors[gem];
+
+    int centerX = x + CELL_SIZE / 2;
+    int centerY = y + CELL_SIZE / 2;
+
+    int alpha = Math.max(0, 255 - (int) (progress * 255));
+    int distance = (int) (progress * 35);
+    int pieceSize = Math.max(4, (int) ((CELL_SIZE - 20) / 3.0 * (1.0 - progress * 0.5)));
+
+    Color fadingColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha);
+    g2.setColor(fadingColor);
+
+    g2.fillOval(centerX - pieceSize / 2 - distance, centerY - pieceSize / 2 - distance, pieceSize, pieceSize);
+    g2.fillOval(centerX - pieceSize / 2 + distance, centerY - pieceSize / 2 - distance, pieceSize, pieceSize);
+    g2.fillOval(centerX - pieceSize / 2 - distance, centerY - pieceSize / 2 + distance, pieceSize, pieceSize);
+    g2.fillOval(centerX - pieceSize / 2 + distance, centerY - pieceSize / 2 + distance, pieceSize, pieceSize);
+
+    int sparkleAlpha = Math.max(0, 200 - (int) (progress * 200));
+    g2.setColor(new Color(255, 255, 255, sparkleAlpha));
+
+    int sparkleSize = Math.max(2, (int) (8 * (1.0 - progress)));
+    g2.fillOval(centerX - distance, centerY - sparkleSize / 2, sparkleSize, sparkleSize);
+    g2.fillOval(centerX + distance, centerY - sparkleSize / 2, sparkleSize, sparkleSize);
+    g2.fillOval(centerX - sparkleSize / 2, centerY - distance, sparkleSize, sparkleSize);
+    g2.fillOval(centerX - sparkleSize / 2, centerY + distance, sparkleSize, sparkleSize);
   }
 
   public static void main(String[] args) {
