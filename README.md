@@ -1,7 +1,12 @@
-# Match-3 Java Game
+# Match3Game (Java)
 
-A Match-3 puzzle game implemented in Java.  
-This project focuses on core game logic, object-oriented design, and basic UI rendering.
+A Match-3 puzzle game built in Java with custom game logic and Swing-based UI.
+
+---
+
+## Demo
+
+![Game Screenshot](assets/demo.png)
 
 ---
 
@@ -9,7 +14,7 @@ This project focuses on core game logic, object-oriented design, and basic UI re
 
 This project is currently under development.
 
-Core gameplay has been implemented. Additional features such as animations, UI improvements, and extended gameplay mechanics are in progress.
+Core gameplay has been implemented. Additional features such as animations and UI improvements are in progress.
 
 ---
 
