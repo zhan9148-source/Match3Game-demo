@@ -5,7 +5,7 @@ import java.util.Random;
 
 public class Match3Game extends JPanel {
   private static final int ROWS = 8, COLS = 8;
-  private static final int CELL_SIZE = 70;
+  private static final int TOP_BAR_HEIGHT = 55;
   private static final int GEM_TYPES = 5;
 
   private static final int ANIMATION_STEPS = 10;
@@ -33,12 +33,17 @@ public class Match3Game extends JPanel {
   private int dropStep = 0;
   private int clearStep = 0;
 
+  private int cellSize = 70;
+  private int offsetX = 0;
+  private int offsetY = TOP_BAR_HEIGHT;
+
   private final Color[] colors = {
       Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW, Color.MAGENTA
   };
 
   public Match3Game() {
-    setPreferredSize(new Dimension(COLS * CELL_SIZE, ROWS * CELL_SIZE + 40));
+    setPreferredSize(new Dimension(900, 900));
+    setBackground(Color.BLACK);
     initBoard();
 
     addMouseListener(new MouseAdapter() {
@@ -49,6 +54,19 @@ public class Match3Game extends JPanel {
         }
       }
     });
+  }
+
+  private void updateLayoutValues() {
+    int availableWidth = getWidth();
+    int availableHeight = getHeight() - TOP_BAR_HEIGHT;
+
+    cellSize = Math.min(availableWidth / COLS, availableHeight / ROWS);
+
+    int boardWidth = cellSize * COLS;
+    int boardHeight = cellSize * ROWS;
+
+    offsetX = (getWidth() - boardWidth) / 2;
+    offsetY = TOP_BAR_HEIGHT + (availableHeight - boardHeight) / 2;
   }
 
   private void initBoard() {
@@ -66,10 +84,13 @@ public class Match3Game extends JPanel {
   }
 
   private void handleClick(int x, int y) {
-    if (y >= ROWS * CELL_SIZE) return;
+    updateLayoutValues();
 
-    int row = y / CELL_SIZE;
-    int col = x / CELL_SIZE;
+    if (x < offsetX || x >= offsetX + cellSize * COLS) return;
+    if (y < offsetY || y >= offsetY + cellSize * ROWS) return;
+
+    int col = (x - offsetX) / cellSize;
+    int row = (y - offsetY) / cellSize;
 
     if (selectedRow == -1) {
       selectedRow = row;
@@ -329,9 +350,17 @@ public class Match3Game extends JPanel {
   @Override
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
+    updateLayoutValues();
 
     Graphics2D g2 = (Graphics2D) g;
     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+    g2.setColor(Color.BLACK);
+    g2.fillRect(0, 0, getWidth(), getHeight());
+
+    g2.setColor(Color.WHITE);
+    g2.setFont(new Font("Arial", Font.BOLD, 32));
+    g2.drawString("Score: " + score, 25, 38);
 
     double progress = animationStep / (double) ANIMATION_STEPS;
     if (swapBack) {
@@ -340,11 +369,14 @@ public class Match3Game extends JPanel {
 
     for (int r = 0; r < ROWS; r++) {
       for (int c = 0; c < COLS; c++) {
-        int x = c * CELL_SIZE;
-        int y = r * CELL_SIZE;
+        int x = offsetX + c * cellSize;
+        int y = offsetY + r * cellSize;
+
+        g2.setColor(new Color(235, 235, 235));
+        g2.fillRect(x, y, cellSize, cellSize);
 
         g2.setColor(Color.DARK_GRAY);
-        g2.drawRect(x, y, CELL_SIZE, CELL_SIZE);
+        g2.drawRect(x, y, cellSize, cellSize);
 
         if (dropping) {
           continue;
@@ -364,10 +396,10 @@ public class Match3Game extends JPanel {
     }
 
     if (animating && !dropping && !clearing) {
-      int ax = aCol * CELL_SIZE;
-      int ay = aRow * CELL_SIZE;
-      int bx = bCol * CELL_SIZE;
-      int by = bRow * CELL_SIZE;
+      int ax = offsetX + aCol * cellSize;
+      int ay = offsetY + aRow * cellSize;
+      int bx = offsetX + bCol * cellSize;
+      int by = offsetY + bRow * cellSize;
 
       int drawAX = (int) (ax + (bx - ax) * progress);
       int drawAY = (int) (ay + (by - ay) * progress);
@@ -386,9 +418,9 @@ public class Match3Game extends JPanel {
           int gem = newBoard[r][c];
           if (gem == -1) continue;
 
-          int x = c * CELL_SIZE;
-          int fromY = startRow[r][c] * CELL_SIZE;
-          int toY = r * CELL_SIZE;
+          int x = offsetX + c * cellSize;
+          int fromY = offsetY + startRow[r][c] * cellSize;
+          int toY = offsetY + r * cellSize;
 
           int y = (int) (fromY + (toY - fromY) * dropProgress);
 
@@ -398,29 +430,28 @@ public class Match3Game extends JPanel {
     }
 
     if (selectedRow != -1 && !animating) {
-      int x = selectedCol * CELL_SIZE;
-      int y = selectedRow * CELL_SIZE;
+      int x = offsetX + selectedCol * cellSize;
+      int y = offsetY + selectedRow * cellSize;
 
+      g2.setStroke(new BasicStroke(Math.max(3, cellSize / 25)));
       g2.setColor(Color.BLACK);
-      g2.drawRect(x + 3, y + 3, CELL_SIZE - 6, CELL_SIZE - 6);
+      g2.drawRect(x + 4, y + 4, cellSize - 8, cellSize - 8);
 
       g2.setColor(Color.ORANGE);
-      g2.drawRect(x + 5, y + 5, CELL_SIZE - 10, CELL_SIZE - 10);
+      g2.drawRect(x + 8, y + 8, cellSize - 16, cellSize - 16);
+
+      g2.setStroke(new BasicStroke(1));
     }
-
-    g2.setColor(Color.BLACK);
-    g2.fillRect(0, ROWS * CELL_SIZE, COLS * CELL_SIZE, 40);
-
-    g2.setColor(Color.WHITE);
-    g2.setFont(new Font("Arial", Font.BOLD, 20));
-    g2.drawString("Score: " + score, 20, ROWS * CELL_SIZE + 27);
   }
 
   private void drawGem(Graphics2D g2, int gem, int x, int y) {
     if (gem < 0) return;
 
+    int padding = cellSize / 7;
+    int size = cellSize - padding * 2;
+
     g2.setColor(colors[gem]);
-    g2.fillOval(x + 10, y + 10, CELL_SIZE - 20, CELL_SIZE - 20);
+    g2.fillOval(x + padding, y + padding, size, size);
   }
 
   private void drawBreakingGem(Graphics2D g2, int gem, int x, int y, double progress) {
@@ -428,12 +459,12 @@ public class Match3Game extends JPanel {
 
     Color color = colors[gem];
 
-    int centerX = x + CELL_SIZE / 2;
-    int centerY = y + CELL_SIZE / 2;
+    int centerX = x + cellSize / 2;
+    int centerY = y + cellSize / 2;
 
     int alpha = Math.max(0, 255 - (int) (progress * 255));
-    int distance = (int) (progress * 35);
-    int pieceSize = Math.max(4, (int) ((CELL_SIZE - 20) / 3.0 * (1.0 - progress * 0.5)));
+    int distance = (int) (progress * cellSize * 0.5);
+    int pieceSize = Math.max(4, (int) ((cellSize * 0.25) * (1.0 - progress * 0.5)));
 
     Color fadingColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha);
     g2.setColor(fadingColor);
@@ -446,7 +477,7 @@ public class Match3Game extends JPanel {
     int sparkleAlpha = Math.max(0, 200 - (int) (progress * 200));
     g2.setColor(new Color(255, 255, 255, sparkleAlpha));
 
-    int sparkleSize = Math.max(2, (int) (8 * (1.0 - progress)));
+    int sparkleSize = Math.max(2, (int) (cellSize * 0.12 * (1.0 - progress)));
     g2.fillOval(centerX - distance, centerY - sparkleSize / 2, sparkleSize, sparkleSize);
     g2.fillOval(centerX + distance, centerY - sparkleSize / 2, sparkleSize, sparkleSize);
     g2.fillOval(centerX - sparkleSize / 2, centerY - distance, sparkleSize, sparkleSize);
@@ -456,10 +487,12 @@ public class Match3Game extends JPanel {
   public static void main(String[] args) {
     JFrame frame = new JFrame("Montezuma Style Match-3 Game");
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    frame.setResizable(false);
+
     frame.add(new Match3Game());
-    frame.pack();
-    frame.setLocationRelativeTo(null);
+
+    frame.setResizable(true);
+    frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+
     frame.setVisible(true);
   }
 }
