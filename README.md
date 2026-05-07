@@ -6,7 +6,15 @@ A Match-3 puzzle game built in Java with custom game logic and Swing-based UI.
 
 ## Demo
 
-![Game Screenshot](assets/demo.png)
+![Game Screenshot](assets/after.png)
+
+---
+
+## Visual Upgrade Comparison
+
+| Before | After |
+|---|---|
+| ![Before](assets/before.png) | ![After](assets/after.png) |
 
 ---
 
